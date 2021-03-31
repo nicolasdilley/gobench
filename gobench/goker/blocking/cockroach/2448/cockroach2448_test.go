@@ -23,56 +23,48 @@ type MultiRaft struct {
 }
 
 // sendEvent can be invoked many times
-func (m *MultiRaft) sendEvent(event interface{}) {
+func sendEvent(event interface{}, events chan interface{}, done chan bool) {
 	/// FIX:
 	/// Let event append a event queue instead of pending here
 	select {
-	case m.Events <- event: // Waiting for events consumption
-	case <-m.stopper.ShouldStop():
+	case events <- event: // Waiting for events consumption
+	case <-done:
 	}
 }
 
-type state struct {
-	*MultiRaft
-}
-
-func (s *state) start() {
+func start(events chan interface{}, callbackChan chan func(), done chan bool) {
 	for {
 		select {
-		case <-s.stopper.ShouldStop():
+		case <-done:
 			return
-		case cb := <-s.callbackChan:
+		case cb := <-callbackChan:
 			cb()
 		default:
-			s.handleWriteResponse()
+			handleWriteResponse(events, callbackChan, done)
 		}
 	}
 }
-func (s *state) handleWriteResponse() {
-	s.processCommittedEntry()
+func handleWriteResponse(events chan interface{}, callbackChan chan func(), done chan bool) {
+	processCommittedEntry(events, callbackChan, done)
 }
 
-func (s *state) processCommittedEntry() {
-	s.sendEvent(&EventMembershipChangeCommitted{
+func processCommittedEntry(events chan interface{}, callbackChan chan func(), done chan bool) {
+	sendEvent(&EventMembershipChangeCommitted{
 		Callback: func() {
 			select {
-			case s.callbackChan <- func() { // Waiting for callbackChan consumption
+			case callbackChan <- func() { // Waiting for callbackChan consumption
 				time.Sleep(time.Nanosecond)
 			}:
-			case <-s.stopper.ShouldStop():
+			case <-done:
 			}
 		},
-	})
+	}, events, done)
 }
 
-type Store struct {
-	multiraft *MultiRaft
-}
-
-func (s *Store) processRaft() {
+func processRaft(events chan interface{}, done chan bool) {
 	for {
 		select {
-		case e := <-s.multiraft.Events:
+		case e := <-events:
 			var callback func()
 			switch e := e.(type) {
 			case *EventMembershipChangeCommitted:
@@ -81,28 +73,17 @@ func (s *Store) processRaft() {
 					callback() // Waiting for callbackChan consumption
 				}
 			}
-		case <-s.multiraft.stopper.ShouldStop():
+		case <-done:
 			return
 		}
 	}
 }
 
-func NewStoreAndState() (*Store, *state) {
-	stopper := &Stopper{
-		Done: make(chan bool),
-	}
-	mltrft := &MultiRaft{
-		stopper:      stopper,
-		Events:       make(chan interface{}),
-		callbackChan: make(chan func()),
-	}
-	st := &state{mltrft}
-	s := &Store{mltrft}
-	return s, st
-}
-
 func TestCockroach2448(t *testing.T) {
-	s, st := NewStoreAndState()
-	go s.processRaft() // G1
-	go st.start()      // G2
+	done := make(chan bool)
+	events := make(chan interface{})
+	callbackChan := make(chan func())
+
+	go processRaft(events, done)         // G1
+	go start(events, callbackChan, done) // G2
 }
