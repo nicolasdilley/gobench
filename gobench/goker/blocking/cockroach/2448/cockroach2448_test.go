@@ -49,29 +49,21 @@ func handleWriteResponse(events chan interface{}, callbackChan chan func(), done
 }
 
 func processCommittedEntry(events chan interface{}, callbackChan chan func(), done chan bool) {
-	sendEvent(&EventMembershipChangeCommitted{
-		Callback: func() {
+	select {
+	case events <- nil: // Waiting for events consumption
+	case <-done:
+	}
+}
+
+func processRaft(events chan interface{}, callbackChan chan func(), done chan bool) {
+	for {
+		select {
+		case <-events:
 			select {
 			case callbackChan <- func() { // Waiting for callbackChan consumption
 				time.Sleep(time.Nanosecond)
 			}:
 			case <-done:
-			}
-		},
-	}, events, done)
-}
-
-func processRaft(events chan interface{}, done chan bool) {
-	for {
-		select {
-		case e := <-events:
-			var callback func()
-			switch e := e.(type) {
-			case *EventMembershipChangeCommitted:
-				callback = e.Callback
-				if callback != nil {
-					callback() // Waiting for callbackChan consumption
-				}
 			}
 		case <-done:
 			return
@@ -84,6 +76,6 @@ func TestCockroach2448(t *testing.T) {
 	events := make(chan interface{})
 	callbackChan := make(chan func())
 
-	go processRaft(events, done)         // G1
-	go start(events, callbackChan, done) // G2
+	go processRaft(events, callbackChan, done) // G1
+	go start(events, callbackChan, done)       // G2
 }
