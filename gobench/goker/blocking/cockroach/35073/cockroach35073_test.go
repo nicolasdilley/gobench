@@ -52,48 +52,38 @@ func (rc *RowChannel) Push() ConsumerStatus {
 	return consumerStatus
 }
 
+func (m *RowChannel) start(wg *sync.WaitGroup) {
+	wg.Add(1)
 
-type outbox struct {
-	RowChannel
-}
-
-func (m *outbox) start(wg *sync.WaitGroup) {
-	if wg != nil {
-		wg.Add(1)
-	}
 	go m.run(wg)
 }
 
-func (m *outbox) run(wg *sync.WaitGroup) {
+func (m *RowChannel) run(wg *sync.WaitGroup) {
 	m.mainLoop()
-	if wg != nil {
-		wg.Done()
-	}
+	wg.Done()
 }
 
-func (m *outbox) mainLoop() {
+func (m *RowChannel) mainLoop() {
 	return
 }
 
 func TestCockroach35073(t *testing.T) {
-	outbox := &outbox{RowChannel: RowChannel{
-		dataChan: make(chan RowChannelMsg, chanBufSize)
-	}}
+	rc := RowChannel{dataChan: make(chan RowChannelMsg, rowChannelBufSize)}
 
 	var wg sync.WaitGroup
 	for i := 0; i < outboxBufRows; i++ {
-		outbox.Push()
+		rc.Push()
 	}
 
 	var blockedPusherWg sync.WaitGroup
 	blockedPusherWg.Add(1)
 	go func() {
-		outbox.Push()
+		rc.Push()
 		blockedPusherWg.Done()
 	}()
 
-	outbox.start(&wg)
+	rc.start(&wg)
 
 	wg.Wait()
-	outbox.RowChannel.Push()
+	rc.Push()
 }
