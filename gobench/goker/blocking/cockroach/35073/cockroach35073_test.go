@@ -52,20 +52,9 @@ func (rc *RowChannel) Push() ConsumerStatus {
 	return consumerStatus
 }
 
-func (rc *RowChannel) InitWithNumSenders() {
-	rc.initWithBufSizeAndNumSenders(rowChannelBufSize)
-}
-
-func (rc *RowChannel) initWithBufSizeAndNumSenders(chanBufSize int) {
-	rc.dataChan = make(chan RowChannelMsg, chanBufSize)
-}
 
 type outbox struct {
 	RowChannel
-}
-
-func (m *outbox) init() {
-	m.RowChannel.InitWithNumSenders()
 }
 
 func (m *outbox) start(wg *sync.WaitGroup) {
@@ -87,8 +76,9 @@ func (m *outbox) mainLoop() {
 }
 
 func TestCockroach35073(t *testing.T) {
-	outbox := &outbox{}
-	outbox.init()
+	outbox := &outbox{RowChannel: RowChannel{
+		dataChan: make(chan RowChannelMsg, chanBufSize)
+	}}
 
 	var wg sync.WaitGroup
 	for i := 0; i < outboxBufRows; i++ {
