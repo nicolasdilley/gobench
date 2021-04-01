@@ -28,20 +28,14 @@ type testContext struct {
 	repl  *Replica
 }
 
-func (tc *testContext) StartWithStoreConfig(stopper *Stopper) {
-	if tc.store == nil {
-		tc.store = &Store{
-			consistencyQueue: &consistencyQueue{},
-		}
-	}
-	tc.store.stopper = stopper
-	tc.repl = &Replica{store: tc.store}
-}
-
 func TestCockroach25456(t *testing.T) {
 	stopper := &Stopper{quiescer: make(chan struct{})}
 	tc := testContext{}
-	tc.StartWithStoreConfig(stopper)
+	tc.store = &Store{
+		consistencyQueue: &consistencyQueue{},
+	}
+	tc.store.stopper = stopper
+	tc.repl = &Replica{store: tc.store}
 
 	for i := 0; i < 2; i++ {
 		tc.store.consistencyQueue.process(tc.repl)
