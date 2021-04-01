@@ -16,7 +16,8 @@ This is some description from developers
 > Previously, the outbox could fail during startup without closing its
   RowChannel. This could lead to deadlocked flows in rare cases.
 
-Channel communication mismatch
+There are 17 sends on rc.datachan which has a capacity of 16. 
+Therefore, the last call to .Push at line 88 blocks.
 
 ### backtrace
 
