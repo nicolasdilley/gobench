@@ -21,10 +21,6 @@ func (rc *RowChannel) Push() {
 	rc.dataChan <- struct{}{}
 }
 
-func (rc *RowChannel) initWithBufSizeAndNumSenders(chanBufSize int) {
-	rc.dataChan = make(chan struct{}, chanBufSize)
-}
-
 type flowEntry struct {
 	flow           *Flow
 	inboundStreams map[int]*inboundStreamInfo
@@ -44,35 +40,15 @@ func (fr *flowRegistry) getEntryLocked(id int) *flowEntry {
 	return entry
 }
 
-func (fr *flowRegistry) cancelPendingStreamsLocked(id int) []RowReceiver {
-	entry := fr.flows[id]
-	pendingReceivers := make([]RowReceiver, 0)
-	for _, is := range entry.inboundStreams {
-		pendingReceivers = append(pendingReceivers, is.receiver)
-	}
-	return pendingReceivers
-}
-
 type Flow struct {
 	id             int
 	flowRegistry   *flowRegistry
 	inboundStreams map[int]*inboundStreamInfo
 }
 
-func (f *Flow) cancel() {
-	f.flowRegistry.Lock()
-	timedOutReceivers := f.flowRegistry.cancelPendingStreamsLocked(f.id)
-	f.flowRegistry.Unlock()
-
-	for _, receiver := range timedOutReceivers {
-		receiver.Push()
-	}
-}
-
-func (fr *flowRegistry) RegisterFlow(f *Flow, inboundStreams map[int]*inboundStreamInfo) {
-	entry := fr.getEntryLocked(f.id)
-	entry.flow = f
-	entry.inboundStreams = inboundStreams
+func (f *Flow) cancel(left *RowChannel, right *RowChannel) {
+	left.Push()
+	right.Push()
 }
 
 func makeFlowRegistry() *flowRegistry {
@@ -84,29 +60,15 @@ func makeFlowRegistry() *flowRegistry {
 func TestCockroach35931(t *testing.T) {
 	fr := makeFlowRegistry()
 
-	left := &RowChannel{}
-	left.initWithBufSizeAndNumSenders(1)
-	right := &RowChannel{}
-	right.initWithBufSizeAndNumSenders(1)
-
-	inboundStreams := map[int]*inboundStreamInfo{
-		0: {
-			receiver: left,
-		},
-		1: {
-			receiver: right,
-		},
-	}
+	left := &RowChannel{dataChan: make(chan struct{}, 1)}
+	right := &RowChannel{dataChan: make(chan struct{}, 1)}
 
 	left.Push()
 
 	flow := &Flow{
-		id:             0,
-		flowRegistry:   fr,
-		inboundStreams: inboundStreams,
+		id:           0,
+		flowRegistry: fr,
 	}
 
-	fr.RegisterFlow(flow, inboundStreams)
-
-	flow.cancel()
+	flow.cancel(left, right)
 }

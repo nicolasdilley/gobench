@@ -23,7 +23,8 @@ This is some description from developers
   and never send a cancellation message to the second stream, which was
   the one actually being read from.
 
-Channel mismatch
+There are 2 sends on channel dataChan from structures left which has a capacity
+of one.
 
 ### backtrace
 
