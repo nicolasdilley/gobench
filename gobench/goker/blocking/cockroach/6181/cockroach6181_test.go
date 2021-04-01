@@ -8,7 +8,6 @@
 package cockroach6181
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 )
@@ -27,7 +26,6 @@ type rangeDescriptorCache struct {
 
 func (rdc *rangeDescriptorCache) LookupRangeDescriptor() {
 	rdc.rangeCacheMu.RLock()
-	fmt.Printf("lookup range descriptor: %s", rdc)
 	rdc.rangeCacheMu.RUnlock()
 	rdc.rangeCacheMu.Lock()
 	rdc.rangeCacheMu.Unlock()
