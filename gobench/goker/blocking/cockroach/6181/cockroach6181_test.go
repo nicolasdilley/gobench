@@ -49,18 +49,16 @@ func doLookupWithToken(rc *rangeDescriptorCache) {
 
 func testRangeCacheCoalescedRquests() {
 	db := initTestDescriptorDB()
-	pauseLookupResumeAndAssert := func() {
-		var wg sync.WaitGroup
-		for i := 0; i < 3; i++ {
-			wg.Add(1)
-			go func() { // G2,G3,...
-				doLookupWithToken(db.cache)
-				wg.Done()
-			}()
-		}
-		wg.Wait()
+	var wg sync.WaitGroup
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func() { // G2,G3,...
+			doLookupWithToken(db.cache)
+			wg.Done()
+		}()
 	}
-	pauseLookupResumeAndAssert()
+	wg.Wait()
+
 }
 
 /// G1 									G2							G3					...
