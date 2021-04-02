@@ -72,12 +72,7 @@ func (kv *kv) getRemote(ctx context.Context) error {
 	return kv.rc.acquire(ctx)
 }
 
-type KV interface {
-	Get(ctx context.Context) error
-	Do(ctx context.Context) error
-}
-
-func NewKV(c *Client) KV {
+func NewKV(c *Client) kv {
 	return &kv{rc: &remoteClient{
 		client: c,
 	}}
