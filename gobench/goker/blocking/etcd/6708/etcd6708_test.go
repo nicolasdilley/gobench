@@ -13,16 +13,6 @@ const (
 	EndpointSelectionPrioritizeLeader
 )
 
-type Client interface {
-	Sync(ctx context.Context)
-	SetEndpoints()
-	httpClient
-}
-
-type httpClient interface {
-	Do(context.Context)
-}
-
 type httpClusterClient struct {
 	mu            sync.RWMutex
 	selectionMode EndpointSelectionMode
@@ -50,10 +40,6 @@ func (c *httpClusterClient) Sync(ctx context.Context) {
 	defer c.mu.Unlock()
 
 	c.SetEndpoints()
-}
-
-type httpMembersAPI struct {
-	client httpClient
 }
 
 func TestEtcd6708(t *testing.T) {
