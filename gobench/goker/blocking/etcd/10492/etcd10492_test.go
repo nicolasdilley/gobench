@@ -20,30 +20,25 @@ func (le *lessor) Checkpoint() {
 	defer le.mu.Unlock()
 }
 
-func (le *lessor) SetCheckpointer(cp Checkpointer) {
+func (le *lessor) SetCheckpointer() {
 	le.mu.Lock()
 	defer le.mu.Unlock()
 
-	le.cp = cp
 }
 
 func (le *lessor) Renew() {
 	le.mu.Lock()
-	unlock := func() { le.mu.Unlock() }
-	defer func() { unlock() }()
+	defer func() { le.mu.Unlock() }()
 
 	if le.cp != nil {
-		le.cp(context.Background())
+		le.Checkpoint()
 	}
 }
 func TestEtcd10492(t *testing.T) {
 	le := &lessor{
 		checkpointInterval: 0,
 	}
-	fakerCheckerpointer := func(ctx context.Context) {
-		le.Checkpoint()
-	}
-	le.SetCheckpointer(fakerCheckerpointer)
+	le.SetCheckpointer()
 	le.mu.Lock()
 	le.mu.Unlock()
 	le.Renew()
