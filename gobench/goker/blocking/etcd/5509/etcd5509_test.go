@@ -55,7 +55,7 @@ func (kv *kv) Get(ctx context.Context) error {
 
 func (kv *kv) Do(ctx context.Context) error {
 	for {
-		err := kv.do(ctx)
+		err := kv.do1(ctx)
 		if err == nil {
 			return nil
 		}
@@ -63,7 +63,7 @@ func (kv *kv) Do(ctx context.Context) error {
 	}
 }
 
-func (kv *kv) do(ctx context.Context) error {
+func (kv *kv) do1(ctx context.Context) error {
 	err := kv.getRemote(ctx)
 	return err
 }
