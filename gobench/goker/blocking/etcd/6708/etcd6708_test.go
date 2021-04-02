@@ -13,10 +13,6 @@ const (
 	EndpointSelectionPrioritizeLeader
 )
 
-type MembersAPI interface {
-	Leader(ctx context.Context)
-}
-
 type Client interface {
 	Sync(ctx context.Context)
 	SetEndpoints()
@@ -28,13 +24,12 @@ type httpClient interface {
 }
 
 type httpClusterClient struct {
-	sync.RWMutex
+	mu            sync.RWMutex
 	selectionMode EndpointSelectionMode
 }
 
 func (c *httpClusterClient) getLeaderEndpoint() {
-	mAPI := NewMembersAPI(c)
-	mAPI.Leader(context.Background())
+	c.Do(context.Background())
 }
 
 func (c *httpClusterClient) SetEndpoints() {
@@ -46,13 +41,13 @@ func (c *httpClusterClient) SetEndpoints() {
 }
 
 func (c *httpClusterClient) Do(ctx context.Context) {
-	c.RLock() // block here
-	c.RUnlock()
+	c.mu.RLock() // block here
+	c.mu.RUnlock()
 }
 
 func (c *httpClusterClient) Sync(ctx context.Context) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	c.SetEndpoints()
 }
@@ -61,15 +56,6 @@ type httpMembersAPI struct {
 	client httpClient
 }
 
-func (m *httpMembersAPI) Leader(ctx context.Context) {
-	m.client.Do(ctx)
-}
-
-func NewMembersAPI(c Client) MembersAPI {
-	return &httpMembersAPI{
-		client: c,
-	}
-}
 func TestEtcd6708(t *testing.T) {
 	hc := &httpClusterClient{
 		selectionMode: EndpointSelectionPrioritizeLeader,
