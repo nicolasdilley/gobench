@@ -14,17 +14,9 @@ import (
 	"testing"
 )
 
-type Balancer interface {
-	Notify() <-chan bool
-}
-
 type roundRobin struct {
 	mu     sync.Mutex
 	addrCh chan bool
-}
-
-func (rr *roundRobin) Notify() <-chan bool {
-	return rr.addrCh
 }
 
 type addrConn struct {
@@ -37,7 +29,7 @@ func (ac *addrConn) tearDown() {
 }
 
 type dialOptions struct {
-	balancer Balancer
+	balancer *roundRobin
 }
 
 type ClientConn struct {
@@ -46,7 +38,7 @@ type ClientConn struct {
 }
 
 func (cc *ClientConn) lbWatcher(doneChan chan bool) {
-	for addr := range cc.dopts.balancer.Notify() {
+	for addr := range cc.dopts.balancer.addrCh {
 		if addr {
 			// nop, make compiler happy
 		}
@@ -74,7 +66,7 @@ func DialContext() {
 	waitC := make(chan error, 1)
 	go func() { // G2
 		defer close(waitC)
-		ch := cc.dopts.balancer.Notify()
+		ch := cc.dopts.balancer.addrCh
 		if ch != nil {
 			doneChan := make(chan bool)
 			go cc.lbWatcher(doneChan) // G3
@@ -82,7 +74,7 @@ func DialContext() {
 		}
 	}()
 	/// close addrCh
-	close(cc.dopts.balancer.(*roundRobin).addrCh)
+	close(cc.dopts.balancer.addrCh)
 }
 
 ///
