@@ -47,4 +47,5 @@ func TestEtcd6708(t *testing.T) {
 		selectionMode: EndpointSelectionPrioritizeLeader,
 	}
 	hc.Sync(context.Background())
+
 }

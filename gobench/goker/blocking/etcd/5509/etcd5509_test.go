@@ -72,7 +72,7 @@ func (kv *kv) getRemote(ctx context.Context) error {
 	return kv.rc.acquire(ctx)
 }
 
-func NewKV(c *Client) kv {
+func NewKV(c *Client) *kv {
 	return &kv{rc: &remoteClient{
 		client: c,
 	}}

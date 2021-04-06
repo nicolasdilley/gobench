@@ -12,7 +12,6 @@ package cockroach10214
 
 import (
 	"sync"
-	"testing"
 	"unsafe"
 )
 
@@ -88,7 +87,7 @@ func (r *Replica) maybeCoalesceHeartbeat() bool {
 	return true
 }
 
-func TestCockroach10214(t *testing.T) {
+func main() {
 	store := &Store{}
 	responses := &store.coalescedMu.heartbeatResponses
 	*responses = append(*responses, 1, 2)
