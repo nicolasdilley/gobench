@@ -65,17 +65,12 @@ func (cc *ClientConn) lbWatcher(doneChan chan bool) {
 	}
 }
 
-func NewClientConn() *ClientConn {
+func DialContext() {
 	cc := &ClientConn{
 		dopts: dialOptions{
-			&roundRobin{addrCh: make(chan bool)},
+			balancer: &roundRobin{addrCh: make(chan bool)},
 		},
 	}
-	return cc
-}
-
-func DialContext() {
-	cc := NewClientConn()
 	waitC := make(chan error, 1)
 	go func() { // G2
 		defer close(waitC)
