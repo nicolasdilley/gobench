@@ -61,12 +61,12 @@ func (p *Page) initContentPlainAndMeta() {
 }
 
 func (p *Page) initPlain(lock bool) {
-	p.plainInit.Do(func() {
-		if lock {
-			p.contentInitMu.Lock() /// Double locking here.
-			defer p.contentInitMu.Unlock()
-		}
-	})
+
+	if lock {
+		p.contentInitMu.Lock() /// Double locking here.
+		defer p.contentInitMu.Unlock()
+	}
+
 }
 
 func (p *Page) withoutContent() *PageWithoutContent {
