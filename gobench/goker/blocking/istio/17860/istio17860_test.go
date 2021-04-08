@@ -110,7 +110,12 @@ func TestIstio17860(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	a := NewAgent(TestProxy{live: neverLive})
+	a := &agent{
+		proxy:        TestProxy{live: neverLive},
+		mu:           &sync.Mutex{},
+		statusCh:     make(chan exitStatus),
+		activeEpochs: make(map[int]struct{}),
+	}
 	go func() { a.Run(ctx) }()
 
 	a.Restart()
