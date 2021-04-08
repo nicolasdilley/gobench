@@ -13,15 +13,6 @@ type Worker struct {
 	ctxCancel context.CancelFunc
 }
 
-func (w *Worker) Start(setupFn func(), runFn func(c context.Context)) {
-	if setupFn != nil {
-		setupFn()
-	}
-	go func() {
-		runFn(w.ctx)
-	}()
-}
-
 func (w *Worker) Stop() {
 	w.ctxCancel()
 }
@@ -48,7 +39,7 @@ func (s *Strategy) OnChange() {
 
 func (s *Strategy) startTimer() {
 	s.timer = time.NewTimer(s.timerFrequency)
-	eventLoop := func(ctx context.Context) {
+	go func(ctx context.Context) {
 		for {
 			select {
 			case <-s.timer.C:
@@ -62,8 +53,7 @@ func (s *Strategy) startTimer() {
 				return
 			}
 		}
-	}
-	s.worker.Start(nil, eventLoop)
+	}(s.worker.ctx)
 }
 
 func (s *Strategy) Close() {
@@ -83,12 +73,12 @@ func (p *Processor) processEvent() {
 }
 
 func (p *Processor) Start() {
-	setupFn := func() {
-		for i := 0; i < 1024; i++ {
-			p.eventCh <- Event(0)
-		}
+
+	for i := 0; i < 1024; i++ {
+		p.eventCh <- Event(0)
 	}
-	runFn := func(ctx context.Context) {
+
+	go func(ctx context.Context) {
 		defer func() {
 			p.stateStrategy.Close()
 		}()
@@ -100,8 +90,7 @@ func (p *Processor) Start() {
 				p.processEvent()
 			}
 		}
-	}
-	p.worker.Start(setupFn, runFn)
+	}(p.worker.c)
 }
 
 func (p *Processor) Stop() {
@@ -115,17 +104,16 @@ func NewWorker() *Worker {
 }
 
 func TestIstio18454(t *testing.T) {
-	stateStrategy := &Strategy{
-		timerFrequency: time.Nanosecond,
-		resetChan:      make(chan struct{}, 1),
-		worker:         NewWorker(),
-	}
 	stateStrategy.startTimerFn = stateStrategy.startTimer
 
 	p := &Processor{
-		stateStrategy: stateStrategy,
-		worker:        NewWorker(),
-		eventCh:       make(chan Event, 1024),
+		stateStrategy: &Strategy{
+			timerFrequency: time.Nanosecond,
+			resetChan:      make(chan struct{}, 1),
+			worker:         NewWorker(),
+		},
+		worker:  NewWorker(),
+		eventCh: make(chan Event, 1024),
 	}
 
 	p.Start()
