@@ -98,14 +98,6 @@ func (a *agent) waitUntilLive() {
 	}
 }
 
-func NewAgent(proxy Proxy) Agent {
-	return &agent{
-		proxy:        proxy,
-		mu:           &sync.Mutex{},
-		statusCh:     make(chan exitStatus),
-		activeEpochs: make(map[int]struct{}),
-	}
-}
 func TestIstio17860(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
