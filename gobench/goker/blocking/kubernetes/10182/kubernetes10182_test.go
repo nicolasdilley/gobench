@@ -45,12 +45,6 @@ func (s *statusManager) SetPodStatus() {
 	s.podStatusChannel <- true
 }
 
-func NewStatusManager() *statusManager {
-	return &statusManager{
-		podStatusChannel: make(chan bool),
-	}
-}
-
 /// G1 						G2							G3
 /// s.Start()
 /// s.syncBatch()
@@ -66,7 +60,9 @@ func NewStatusManager() *statusManager {
 /// s.podStatusesLock.Lock()
 /// -----------------------------G1,G3 deadlock----------------------------
 func TestKubernetes10182(t *testing.T) {
-	s := NewStatusManager()
+	s := &statusManager{
+		podStatusChannel: make(chan bool),
+	}
 	go s.Start()
 	go s.SetPodStatus() // G2
 	go s.SetPodStatus() // G3
