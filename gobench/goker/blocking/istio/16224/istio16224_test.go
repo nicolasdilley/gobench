@@ -26,7 +26,7 @@ func (m *configstoreMonitor) Run(stop <-chan struct{}, done chan bool, lock *syn
 				close(m.eventCh)
 			}
 			return
-		case ce, ok := <-m.eventCh:
+		case _, ok := <-m.eventCh:
 			if ok {
 				lock.Lock()
 				done <- true
@@ -53,7 +53,7 @@ func TestIstio16224(t *testing.T) {
 		eventCh: make(chan Event),
 	}}
 	done := make(chan bool)
-	lock := sync.Mutex{}
+	lock := &sync.Mutex{}
 
 	stop := make(chan struct{})
 	go controller.Run(stop, done, lock)

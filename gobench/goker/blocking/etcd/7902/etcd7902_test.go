@@ -34,6 +34,7 @@ func runElectionFunc() {
 	rcs := make([]roundClient, 3)
 	nextc := make(chan bool)
 	for i := range rcs {
+		i := i
 		var rcNextc chan bool
 		setRcNextc := func() {
 			rcNextc = nextc
