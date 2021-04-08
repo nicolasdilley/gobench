@@ -110,10 +110,6 @@ func TestIstio17860(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	neverLive := func() bool {
-		return false
-	}
-
 	a := NewAgent(TestProxy{live: neverLive})
 	go func() { a.Run(ctx) }()
 
