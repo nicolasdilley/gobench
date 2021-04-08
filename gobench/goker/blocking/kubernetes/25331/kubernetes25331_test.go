@@ -40,16 +40,6 @@ func (wc *watchChan) run() {
 	}
 }
 
-func NewWatchChan() *watchChan {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &watchChan{
-		ctx:        ctx,
-		cancel:     cancel,
-		resultChan: make(chan bool),
-		errChan:    make(chan error),
-	}
-}
-
 ///
 /// G1					G2
 /// wc.run()
@@ -63,7 +53,13 @@ func NewWatchChan() *watchChan {
 ///
 
 func TestKubernetes25331(t *testing.T) {
-	wc := NewWatchChan()
+	ctx, cancel := context.WithCancel(context.Background())
+	wc := &watchChan{
+		ctx:        ctx,
+		cancel:     cancel,
+		resultChan: make(chan bool),
+		errChan:    make(chan error),
+	}
 	go wc.run()  // G1
 	go wc.Stop() // G2
 }
