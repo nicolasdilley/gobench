@@ -37,16 +37,6 @@ type Service struct {
 	mappings []*Mapping
 }
 
-func (s *Service) NewMapping() *Mapping {
-	mapping := &Mapping{
-		extAddresses: make(map[string]Address),
-	}
-	s.mut.Lock()
-	s.mappings = append(s.mappings, mapping)
-	s.mut.Unlock()
-	return mapping
-}
-
 func (s *Service) RemoveMapping(mapping *Mapping) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
@@ -63,7 +53,13 @@ func NewService() *Service {
 
 func TestSyncthing4829(t *testing.T) {
 	natSvc := NewService()
-	m := natSvc.NewMapping()
+	m := &Mapping{
+		extAddresses: make(map[string]Address),
+	}
+	natSvc.mut.Lock()
+	natSvc.mappings = append(natSvc.mappings, m)
+	natSvc.mut.Unlock()
+
 	m.extAddresses["test"] = 0
 
 	natSvc.RemoveMapping(m)
