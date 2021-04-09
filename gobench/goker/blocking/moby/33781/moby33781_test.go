@@ -22,12 +22,12 @@ import (
 func monitor(stop chan bool) {
 	probeInterval := 50 * time.Nanosecond
 	probeTimeout := 50 * time.Nanosecond
+	results := make(chan bool)
 	for {
 		select {
 		case <-stop:
 			return
 		case <-time.After(probeInterval):
-			results := make(chan bool)
 			ctx, cancelProbe := context.WithTimeout(context.Background(), probeTimeout)
 			go func() { // G3
 				results <- true
