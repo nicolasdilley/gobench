@@ -23,23 +23,12 @@ type State struct {
 }
 
 type Container struct {
-	sync.Mutex
+	mu    sync.Mutex
 	State *State
-}
-
-func (ctr *Container) start() {
-	go ctr.waitExit()
-}
-func (ctr *Container) waitExit() {
-
 }
 
 type Store struct {
 	ctr *Container
-}
-
-func (s *Store) Get() *Container {
-	return s.ctr
 }
 
 type Daemon struct {
@@ -47,35 +36,25 @@ type Daemon struct {
 }
 
 func (d *Daemon) StateChanged() {
-	c := d.containers.Get()
-	c.Lock()
-	d.updateHealthMonitorElseBranch(c)
-	defer c.Unlock()
+
+	d.containers.ctr.mu.Lock()
+	d.updateHealthMonitorElseBranch(d.containers.ctr)
+	defer c.mu.Unlock()
 }
 
-func (d *Daemon) updateHealthMonitorIfBranch(c *Container) {
-	h := c.State.Health
-	if stop := h.OpenMonitorChannel(); stop != nil {
-		go monitor(c, stop)
-	}
-}
 func (d *Daemon) updateHealthMonitorElseBranch(c *Container) {
-	h := c.State.Health
-	h.CloseMonitorChannel()
+
+	c.State.Health.CloseMonitorChannel()
 }
 
 type Health struct {
 	stop chan struct{}
 }
 
-func (s *Health) OpenMonitorChannel() chan struct{} {
-	return s.stop
-}
-
 func (s *Health) CloseMonitorChannel() {
-	if s.stop != nil {
-		s.stop <- struct{}{}
-	}
+
+	s.stop <- struct{}{}
+
 }
 
 func monitor(c *Container, stop chan struct{}) {
@@ -90,16 +69,8 @@ func monitor(c *Container, stop chan struct{}) {
 }
 
 func handleProbeResult(c *Container) {
-	c.Lock()
-	defer c.Unlock()
-}
-
-func NewDaemonAndContainer() (*Daemon, *Container) {
-	c := &Container{
-		State: &State{&Health{make(chan struct{})}},
-	}
-	d := &Daemon{Store{c}}
-	return d, c
+	c.mu.Lock()
+	defer c.mu.Unlock()
 }
 
 ///
@@ -107,15 +78,18 @@ func NewDaemonAndContainer() (*Daemon, *Container) {
 /// monitor()
 /// handleProbeResult()
 /// 							d.StateChanged()
-/// 							c.Lock()
+/// 							c.mu.Lock()
 /// 							d.updateHealthMonitorElseBranch()
 /// 							h.CloseMonitorChannel()
 /// 							s.stop <- struct{}{}
-/// c.Lock()
+/// c.mu.Lock()
 /// ----------------------G1,G2 deadlock------------------------
 ///
 func TestMoby28462(t *testing.T) {
-	d, c := NewDaemonAndContainer()
-	go monitor(c, c.State.Health.OpenMonitorChannel()) // G1
-	go d.StateChanged()                                // G2
+
+	d := &Daemon{containers: Store{ctr: &Container{
+		State: &State{Health: &Health{stop: make(chan struct{})}},
+	}}}
+	go monitor(d.containers.ctr, d.containers.ctr.State.Health.stop) // G1
+	go d.StateChanged()                                              // G2
 }
