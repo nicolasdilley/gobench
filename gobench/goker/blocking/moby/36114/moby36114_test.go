@@ -17,18 +17,18 @@ import (
 )
 
 type serviceVM struct {
-	sync.Mutex
+	mu sync.Mutex
 }
 
 func (svm *serviceVM) hotAddVHDsAtStart() {
-	svm.Lock()
-	defer svm.Unlock()
+	svm.mu.Lock()
+	defer svm.mu.Unlock()
 	svm.hotRemoveVHDsAtStart()
 }
 
 func (svm *serviceVM) hotRemoveVHDsAtStart() {
-	svm.Lock() // Double lock here
-	defer svm.Unlock()
+	svm.mu.Lock() // Double lock here
+	defer svm.mu.Unlock()
 }
 
 func TestMoby36114(t *testing.T) {
