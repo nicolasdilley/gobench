@@ -16,14 +16,6 @@ import (
 	"testing"
 )
 
-func Go(f func() error) chan error {
-	ch := make(chan error)
-	go func() {
-		ch <- f() // G2
-	}()
-	return ch
-}
-
 ///
 /// G1				G2
 /// Go()
@@ -33,7 +25,8 @@ func Go(f func() error) chan error {
 ///
 
 func TestMoby4395(t *testing.T) {
-	Go(func() error { // G1
-		return errors.New("")
-	})
+	ch := make(chan error)
+	go func() {
+		ch <- errors.New("") // G2
+	}()
 }
