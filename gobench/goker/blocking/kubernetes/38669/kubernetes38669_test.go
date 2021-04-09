@@ -46,18 +46,13 @@ func (c *cacheWatcher) stop() {
 	}
 }
 
-func newCacheWatcher(chanSize int, initEvents []watchCacheEvent) *cacheWatcher {
+func TestKubernetes38669(t *testing.T) {
+	initEvents := []watchCacheEvent{1, 2}
 	watcher := &cacheWatcher{
-		input:   make(chan watchCacheEvent, chanSize),
-		result:  make(chan Event, chanSize),
+		input:   make(chan watchCacheEvent, 0),
+		result:  make(chan Event, 0),
 		stopped: false,
 	}
 	go watcher.process(initEvents)
-	return watcher
-}
-
-func TestKubernetes38669(t *testing.T) {
-	initEvents := []watchCacheEvent{1, 2}
-	w := newCacheWatcher(0, initEvents)
-	w.Stop()
+	watcher.Stop()
 }

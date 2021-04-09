@@ -51,15 +51,6 @@ func (i *idleAwareFramer) WriteFrame() {
 	i.resetChan <- true
 }
 
-func NewIdleAwareFramer() *idleAwareFramer {
-	return &idleAwareFramer{
-		resetChan: make(chan bool),
-		conn: &Connection{
-			closeChan: make(chan bool),
-		},
-	}
-}
-
 ///
 /// G1						G2					helper goroutine
 /// i.monitor()
@@ -72,7 +63,12 @@ func NewIdleAwareFramer() *idleAwareFramer {
 ///	----------------------G1,G2 deadlock------------------------
 ///
 func TestKubernetes6632(t *testing.T) {
-	i := NewIdleAwareFramer()
+	i := &idleAwareFramer{
+		resetChan: make(chan bool),
+		conn: &Connection{
+			closeChan: make(chan bool),
+		},
+	}
 
 	go func() { // helper goroutine
 		i.conn.closeChan <- true

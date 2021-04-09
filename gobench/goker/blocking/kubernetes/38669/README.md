@@ -11,5 +11,5 @@
  
 ## Description
 
-No sender for line 33.
+No receiver for line 33.
 

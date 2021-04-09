@@ -96,5 +96,5 @@ func NewPolicyAndManager() (*staticPolicy, *manager) {
 func TestKubernetes62464(t *testing.T) {
 	p, m := NewPolicyAndManager()
 	go m.reconcileState()
-	go p.RemoveContainer(m.state)
+	p.RemoveContainer(m.state)
 }
