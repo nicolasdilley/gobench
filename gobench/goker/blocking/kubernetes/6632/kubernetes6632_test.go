@@ -28,13 +28,12 @@ type idleAwareFramer struct {
 }
 
 func (i *idleAwareFramer) monitor() {
-	var resetChan = i.resetChan
 Loop:
 	for {
 		select {
 		case <-i.conn.closeChan:
 			i.writeLock.Lock()
-			close(resetChan)
+			close(i.resetChan)
 			i.resetChan = nil
 			i.writeLock.Unlock()
 			break Loop
