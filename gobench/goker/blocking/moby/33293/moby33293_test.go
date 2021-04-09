@@ -19,14 +19,14 @@ func MayReturnError() error {
 	}
 	return nil
 }
-func containerWait() <-chan error {
+func containerWait() error {
 	errC := make(chan error)
 	err := MayReturnError()
 	if err != nil {
 		errC <- err /// Block here
-		return errC
+		return err
 	}
-	return errC
+	return err
 }
 
 ///
