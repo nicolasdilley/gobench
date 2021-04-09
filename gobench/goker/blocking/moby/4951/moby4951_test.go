@@ -19,29 +19,19 @@ import (
 )
 
 type DeviceSet struct {
-	sync.Mutex
-	infos            map[string]*DevInfo
+	mu               sync.Mutex
+	infos            *DevInfo
 	nrDeletedDevices int
 }
 
 func (devices *DeviceSet) DeleteDevice(hash string) {
-	devices.Lock()
-	defer devices.Unlock()
+	devices.mu.Lock()
+	defer devices.mu.Unlock()
 
-	info := devices.lookupDevice(hash)
+	devices.infos.lock.Lock()
+	defer devices.infos.lock.Unlock()
 
-	info.lock.Lock()
-	defer info.lock.Unlock()
-
-	devices.deleteDevice(info)
-}
-
-func (devices *DeviceSet) lookupDevice(hash string) *DevInfo {
-	existing, ok := devices.infos[hash]
-	if !ok {
-		return nil
-	}
-	return existing
+	devices.deleteDevice(devices.infos)
 }
 
 func (devices *DeviceSet) deleteDevice(info *DevInfo) {
@@ -50,9 +40,9 @@ func (devices *DeviceSet) deleteDevice(info *DevInfo) {
 
 func (devices *DeviceSet) removeDeviceAndWait(devname string) {
 	/// remove devices by devname
-	devices.Unlock()
+	devices.mu.Unlock()
 	time.Sleep(300 * time.Nanosecond)
-	devices.Lock()
+	devices.mu.Lock()
 }
 
 type DevInfo struct {
@@ -66,16 +56,11 @@ func (info *DevInfo) Name() string {
 
 func NewDeviceSet() *DeviceSet {
 	devices := &DeviceSet{
-		infos: make(map[string]*DevInfo),
+		infos: &DevInfo{
+			name: "info1",
+		},
 	}
-	info1 := &DevInfo{
-		name: "info1",
-	}
-	info2 := &DevInfo{
-		name: "info2",
-	}
-	devices.infos[info1.name] = info1
-	devices.infos[info2.name] = info2
+
 	return devices
 }
 

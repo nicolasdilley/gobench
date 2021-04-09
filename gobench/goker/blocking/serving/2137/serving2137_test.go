@@ -18,73 +18,12 @@ type Breaker struct {
 	activeRequests  chan token
 }
 
-func (b *Breaker) Maybe(thunk func()) bool {
-	var t token
-	select {
-	default:
-		// Pending request queue is full.  Report failure.
-		return false
-	case b.pendingRequests <- t:
-		// Pending request has capacity.
-		// Wait for capacity in the active queue.
-		b.activeRequests <- t
-		// Defer releasing capacity in the active and pending request queue.
-		defer func() { <-b.activeRequests; <-b.pendingRequests }()
-		// Do the thing.
-		thunk()
-		// Report success
-		return true
-	}
-}
-
-func (b *Breaker) concurrentRequest() request {
-	runtime.Gosched()
-
-	r := request{lock: &sync.Mutex{}, accepted: make(chan bool, 1)}
-	r.lock.Lock()
-	var start sync.WaitGroup
-	start.Add(1)
-	go func() { // G2, G3
-		start.Done()
-		ok := b.Maybe(func() {
-			r.lock.Lock() // Will block on locked mutex.
-			r.lock.Unlock()
-		})
-		r.accepted <- ok
-	}()
-	start.Wait() // Ensure that the go func has had a chance to execute.
-	return r
-}
-
-// Perform n requests against the breaker, returning mutexes for each
-// request which succeeded, and a slice of bools for all requests.
-func (b *Breaker) concurrentRequests(n int) []request {
-	requests := make([]request, n)
-	for i := range requests {
-		requests[i] = b.concurrentRequest()
-	}
-	return requests
-}
-
-func NewBreaker(queueDepth, maxConcurrency int32) *Breaker {
-	return &Breaker{
-		pendingRequests: make(chan token, queueDepth+maxConcurrency),
-		activeRequests:  make(chan token, maxConcurrency),
-	}
-}
-
 func unlock(req request) {
 	req.lock.Unlock()
 	// Verify that function has completed
 	ok := <-req.accepted
 	// Requeue for next usage
 	req.accepted <- ok
-}
-
-func unlockAll(requests []request) {
-	for _, lc := range requests {
-		unlock(lc)
-	}
 }
 
 //
@@ -111,8 +50,78 @@ func unlockAll(requests []request) {
 // ----------------------------G1,G2,G3 deadlock-----------------------------
 //
 func TestServing2137(t *testing.T) {
-	b := NewBreaker(1, 1)
+	b := &Breaker{
+		pendingRequests: make(chan token, 1+1),
+		activeRequests:  make(chan token, 1),
+	}
+	runtime.Gosched()
 
-	locks := b.concurrentRequests(2) // G1
-	unlockAll(locks)
+	r := request{lock: &sync.Mutex{}, accepted: make(chan bool, 1)}
+	r.lock.Lock()
+	var start sync.WaitGroup
+	start.Add(1)
+	go func() { // G2, G3
+		start.Done()
+
+		var t token
+		var result bool
+		select {
+		default:
+			// Pending request queue is full.  Report failure.
+			result = false
+		case b.pendingRequests <- t:
+			// Pending request has capacity.
+			// Wait for capacity in the active queue.
+			b.activeRequests <- t
+			// Defer releasing capacity in the active and pending request queue.
+			// Do the thing.
+			r.lock.Lock() // Will block on locked mutex.
+			r.lock.Unlock()
+
+			<-b.activeRequests
+			<-b.pendingRequests
+			// Report success
+			result = true
+		}
+		r.accepted <- result
+	}()
+	start.Wait() // Ensure that the go func has had a chance to execute.
+
+	runtime.Gosched()
+
+	r1 := request{lock: &sync.Mutex{}, accepted: make(chan bool, 1)}
+	r1.lock.Lock()
+	var start1 sync.WaitGroup
+	start1.Add(1)
+	go func() { // G2, G3
+		start1.Done()
+
+		var t token
+		var result bool
+		select {
+		default:
+			// Pending request queue is full.  Report failure.
+			result = false
+		case b.pendingRequests <- t:
+			// Pending request has capacity.
+			// Wait for capacity in the active queue.
+			b.activeRequests <- t
+			// Defer releasing capacity in the active and pending request queue.
+			// Do the thing.
+			r1.lock.Lock() // Will block on locked mutex.
+			r1.lock.Unlock()
+
+			<-b.activeRequests
+			<-b.pendingRequests
+			// Report success
+			result = true
+		}
+
+		r1.accepted <- result
+	}()
+	start1.Wait() // Ensure that the go func has had a chance to execute.
+
+	unlock(r)
+	unlock(r1)
+
 }
