@@ -39,7 +39,7 @@ func (d *Daemon) StateChanged() {
 
 	d.containers.ctr.mu.Lock()
 	d.updateHealthMonitorElseBranch(d.containers.ctr)
-	defer c.mu.Unlock()
+	defer d.containers.ctr.mu.Unlock()
 }
 
 func (d *Daemon) updateHealthMonitorElseBranch(c *Container) {
