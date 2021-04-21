@@ -30,7 +30,7 @@ func (ccc *lbCacheClientConn) NewSubConn(addrs []Address) SubConn {
 	ccc.mu.Lock()
 	defer ccc.mu.Unlock()
 	if entry, ok := ccc.subConnCache[addrWithoutMD]; ok {
-		entry.cancel()
+		entry.abortDeleting = true
 		delete(ccc.subConnCache, addrWithoutMD)
 		return entry.sc
 	}
@@ -59,21 +59,14 @@ func (ccc *lbCacheClientConn) RemoveSubConn(sc SubConn) {
 	}
 	ccc.subConnCache[addr] = entry
 
-	timer := time.AfterFunc(ccc.timeout, func() {
-		ccc.mu.Lock()
-		if entry.abortDeleting {
-			return // Missing unlock
-		}
-		delete(ccc.subConnToAddr, sc)
-		delete(ccc.subConnCache, addr)
-		ccc.mu.Unlock()
-	})
-
-	entry.cancel = func() {
-		if !timer.Stop() {
-			entry.abortDeleting = true
-		}
+	ccc.mu.Lock()
+	if entry.abortDeleting {
+		return // Missing unlock
 	}
+	delete(ccc.subConnToAddr, sc)
+	delete(ccc.subConnCache, addr)
+	ccc.mu.Unlock()
+
 }
 func TestGrpc3017(t *testing.T) {
 	done := make(chan struct{})
