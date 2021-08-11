@@ -21,5 +21,5 @@ func main() {
 	x, _ := strconv.Atoi(os.Args[1])
 	a := make(chan int)
 	go sender(a, x)
-	receiver(a, x)
+	receiver(a, x+1)
 }
