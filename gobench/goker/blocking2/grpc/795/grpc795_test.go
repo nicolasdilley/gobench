@@ -33,9 +33,8 @@ type test struct {
 }
 
 func (te *test) startServer() {
-	s := NewServer()
-	te.srv = s
-	go s.Serve()
+	te.srv = NewServer()
+	go te.srv.Serve()
 }
 
 func newTest() *test {
