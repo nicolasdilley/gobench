@@ -1,0 +1,4 @@
+[(Closing_main_testActivet2 + Sync_main_testActivet2 + Closing_sync_c_Waitt0 + Sync_sync_c_Waitt0 + Sync_main_maint2 + tau + tausync)*]
+(
+(<CHANCLOSED_main_testActivet2>true => [(CHANCLOSING_main_testActivet2)]false)
+)

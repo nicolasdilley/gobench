@@ -1,0 +1,8 @@
+[(tau + tausync)*]
+(
+(<LOCK_t4>true => mu Z .(<Sync_t4>true) || (<tau>Z || <tausync>Z))
+&&
+(<LOCK_t0>true => mu Z .(<Sync_t0>true) || (<tau>Z || <tausync>Z))
+&&
+(<RLOCK_t0>true => mu Z .(<Sync_t0>true) || (<tau>Z || <tausync>Z))
+)

@@ -1,0 +1,6 @@
+[(Sync_main_maint2 + Sync_main_maint3 + Sync_main_maint0 + Sync_main_maint1 + tau + tausync)*]
+(
+(<WRITE_MAIN__WRITERMAIN_MAINT0MAIN_MAINT2_main_maint2>true => [(READ_main_maint2)]false)
+&&
+(<WRITE_MAIN__WRITERMAIN_MAINT1MAIN_MAINT3_main_maint3>true => [(READ_main_maint3)]false)
+)
